@@ -2426,6 +2426,13 @@ function updateWeatherUI() {
 }
 
 function fetchWeather() {
+    var w1 = document.getElementById('weather1');
+    var w3 = document.getElementById('weather3');
+    var w4 = document.getElementById('weather4');
+    if (w1) w1.innerHTML = "...";
+    if (w3) w3.innerHTML = "...";
+    if (w4) w4.innerHTML = "...";
+
     $.ajax({
         url: "https://ipapi.co/json/",
         dataType: "jsonp",
@@ -2477,9 +2484,7 @@ function fetchWeather() {
     });
 }
 
-fetchWeather();
-
 function wlkgp() {
-    updateWeatherUI();
+    fetchWeather();
 }
 
