@@ -2433,55 +2433,110 @@ function fetchWeather() {
     if (w3) w3.innerHTML = "...";
     if (w4) w4.innerHTML = "...";
 
-    $.ajax({
-        url: "https://ipapi.co/json/",
-        dataType: "jsonp",
-        timeout: 3000,
-        success: function (geoResponse) {
-            console.log(geoResponse)
-            var lat = geoResponse.latitude || 22.3269;
-            var lon = geoResponse.longitude || 87.3105;
-            weatherData.city = geoResponse.city || "Kharagpur";
-            weatherData.region = geoResponse.region || "West Bengal";
+    // Start geolocation lookup chain
+    tryIpapi();
 
-            $.ajax({
-                url: "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current=temperature_2m,relative_humidity_2m,surface_pressure",
-                dataType: "json",
-                timeout: 3000,
-                success: function (weatherResponse) {
-                    if (weatherResponse && weatherResponse.current) {
-                        weatherData.temp = Math.round(weatherResponse.current.temperature_2m);
-                        weatherData.humidity = Math.round(weatherResponse.current.relative_humidity_2m);
-                        weatherData.pressure = Math.round(weatherResponse.current.surface_pressure);
-                    }
-                    updateWeatherUI();
-                },
-                error: function () {
-                    updateWeatherUI();
+    function tryIpapi() {
+        $.ajax({
+            url: "https://ipapi.co/json/",
+            dataType: "jsonp",
+            timeout: 2500,
+            success: function (geoResponse) {
+                if (geoResponse && geoResponse.latitude && geoResponse.longitude) {
+                    getWeatherData(
+                        geoResponse.latitude, 
+                        geoResponse.longitude, 
+                        geoResponse.city || "Unknown City", 
+                        geoResponse.region || "Unknown Region"
+                    );
+                } else {
+                    tryIpwhois();
                 }
-            });
-        },
-        error: function (error) {
-            console.warn("Could not retrieve dynamic location via JSONP. Falling back to Kharagpur weather.", error);
-            $.ajax({
-                url: "https://api.open-meteo.com/v1/forecast?latitude=22.3269&longitude=87.3105&current=temperature_2m,relative_humidity_2m,surface_pressure",
-                dataType: "json",
-                timeout: 3000,
-                success: function (weatherResponse) {
-                    console.log(weatherResponse)
-                    if (weatherResponse && weatherResponse.current) {
-                        weatherData.temp = Math.round(weatherResponse.current.temperature_2m);
-                        weatherData.humidity = Math.round(weatherResponse.current.relative_humidity_2m);
-                        weatherData.pressure = Math.round(weatherResponse.current.surface_pressure);
-                    }
-                    updateWeatherUI();
-                },
-                error: function () {
-                    updateWeatherUI();
+            },
+            error: function () {
+                tryIpwhois();
+            }
+        });
+    }
+
+    function tryIpwhois() {
+        console.warn("ipapi.co failed. Trying ipwho.is...");
+        $.ajax({
+            url: "https://ipwho.is/",
+            dataType: "jsonp",
+            timeout: 2500,
+            success: function (geoResponse) {
+                if (geoResponse && geoResponse.success && geoResponse.latitude && geoResponse.longitude) {
+                    getWeatherData(
+                        geoResponse.latitude, 
+                        geoResponse.longitude, 
+                        geoResponse.city || "Unknown City", 
+                        geoResponse.region || "Unknown Region"
+                    );
+                } else {
+                    tryFreeipapi();
                 }
-            });
-        }
-    });
+            },
+            error: function () {
+                tryFreeipapi();
+            }
+        });
+    }
+
+    function tryFreeipapi() {
+        console.warn("ipwho.is failed. Trying freeipapi.com...");
+        $.ajax({
+            url: "https://freeipapi.com/api/json",
+            dataType: "json",
+            timeout: 2500,
+            success: function (geoResponse) {
+                if (geoResponse && geoResponse.latitude && geoResponse.longitude) {
+                    getWeatherData(
+                        geoResponse.latitude, 
+                        geoResponse.longitude, 
+                        geoResponse.cityName || "Unknown City", 
+                        geoResponse.regionName || "Unknown Region"
+                    );
+                } else {
+                    fallbackToKharagpur();
+                }
+            },
+            error: function () {
+                fallbackToKharagpur();
+            }
+        });
+    }
+
+    function getWeatherData(lat, lon, city, region) {
+        weatherData.city = city;
+        weatherData.region = region;
+        console.log("Geolocation successful: " + city + ", " + region + " (" + lat + ", " + lon + ")");
+        
+        $.ajax({
+            url: "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current=temperature_2m,relative_humidity_2m,surface_pressure",
+            dataType: "json",
+            timeout: 3000,
+            success: function (weatherResponse) {
+                console.log(weatherResponse);
+                if (weatherResponse && weatherResponse.current) {
+                    weatherData.temp = Math.round(weatherResponse.current.temperature_2m);
+                    weatherData.humidity = Math.round(weatherResponse.current.relative_humidity_2m);
+                    weatherData.pressure = Math.round(weatherResponse.current.surface_pressure);
+                }
+                updateWeatherUI();
+            },
+            error: function () {
+                updateWeatherUI();
+            }
+        });
+    }
+
+    function fallbackToKharagpur() {
+        console.warn("All geolocation APIs failed. Falling back to Kharagpur weather.");
+        weatherData.city = "Kharagpur";
+        weatherData.region = "West Bengal";
+        getWeatherData(22.3269, 87.3105, "Kharagpur", "West Bengal");
+    }
 }
 
 function wlkgp() {
