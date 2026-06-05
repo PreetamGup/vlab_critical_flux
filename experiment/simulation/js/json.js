@@ -2433,10 +2433,86 @@ function fetchWeather() {
     if (w3) w3.innerHTML = "...";
     if (w4) w4.innerHTML = "...";
 
-    // Start geolocation lookup chain
-    tryIpapi();
+    // Start geolocation lookup chain via CORS first
+    tryIpapiCors();
 
-    function tryIpapi() {
+    // --- CORS Attempts ---
+
+    function tryIpapiCors() {
+        $.ajax({
+            url: "https://ipapi.co/json/",
+            dataType: "json",
+            timeout: 2500,
+            success: function (geoResponse) {
+                if (geoResponse && geoResponse.latitude && geoResponse.longitude) {
+                    getWeatherData(
+                        geoResponse.latitude, 
+                        geoResponse.longitude, 
+                        geoResponse.city || "Unknown City", 
+                        geoResponse.region || "Unknown Region"
+                    );
+                } else {
+                    tryIpwhoisCors();
+                }
+            },
+            error: function () {
+                tryIpwhoisCors();
+            }
+        });
+    }
+
+    function tryIpwhoisCors() {
+        console.warn("ipapi.co CORS failed. Trying ipwho.is CORS...");
+        $.ajax({
+            url: "https://ipwho.is/",
+            dataType: "json",
+            timeout: 2500,
+            success: function (geoResponse) {
+                if (geoResponse && geoResponse.success && geoResponse.latitude && geoResponse.longitude) {
+                    getWeatherData(
+                        geoResponse.latitude, 
+                        geoResponse.longitude, 
+                        geoResponse.city || "Unknown City", 
+                        geoResponse.region || "Unknown Region"
+                    );
+                } else {
+                    tryFreeipapiCors();
+                }
+            },
+            error: function () {
+                tryFreeipapiCors();
+            }
+        });
+    }
+
+    function tryFreeipapiCors() {
+        console.warn("ipwho.is CORS failed. Trying freeipapi.com CORS...");
+        $.ajax({
+            url: "https://freeipapi.com/api/json/",
+            dataType: "json",
+            timeout: 2500,
+            success: function (geoResponse) {
+                if (geoResponse && geoResponse.latitude && geoResponse.longitude) {
+                    getWeatherData(
+                        geoResponse.latitude, 
+                        geoResponse.longitude, 
+                        geoResponse.cityName || "Unknown City", 
+                        geoResponse.regionName || "Unknown Region"
+                    );
+                } else {
+                    tryIpapiJsonp();
+                }
+            },
+            error: function () {
+                tryIpapiJsonp();
+            }
+        });
+    }
+
+    // --- JSONP Attempts (Fallback for local files / file://) ---
+
+    function tryIpapiJsonp() {
+        console.warn("CORS attempts failed. Trying ipapi.co JSONP...");
         $.ajax({
             url: "https://ipapi.co/json/",
             dataType: "jsonp",
@@ -2450,17 +2526,17 @@ function fetchWeather() {
                         geoResponse.region || "Unknown Region"
                     );
                 } else {
-                    tryIpwhois();
+                    tryIpwhoisJsonp();
                 }
             },
             error: function () {
-                tryIpwhois();
+                tryIpwhoisJsonp();
             }
         });
     }
 
-    function tryIpwhois() {
-        console.warn("ipapi.co failed. Trying ipwho.is...");
+    function tryIpwhoisJsonp() {
+        console.warn("ipapi.co JSONP failed. Trying ipwho.is JSONP...");
         $.ajax({
             url: "https://ipwho.is/",
             dataType: "jsonp",
@@ -2474,30 +2550,6 @@ function fetchWeather() {
                         geoResponse.region || "Unknown Region"
                     );
                 } else {
-                    tryFreeipapi();
-                }
-            },
-            error: function () {
-                tryFreeipapi();
-            }
-        });
-    }
-
-    function tryFreeipapi() {
-        console.warn("ipwho.is failed. Trying freeipapi.com...");
-        $.ajax({
-            url: "https://freeipapi.com/api/json",
-            dataType: "json",
-            timeout: 2500,
-            success: function (geoResponse) {
-                if (geoResponse && geoResponse.latitude && geoResponse.longitude) {
-                    getWeatherData(
-                        geoResponse.latitude, 
-                        geoResponse.longitude, 
-                        geoResponse.cityName || "Unknown City", 
-                        geoResponse.regionName || "Unknown Region"
-                    );
-                } else {
                     fallbackToKharagpur();
                 }
             },
@@ -2506,6 +2558,8 @@ function fetchWeather() {
             }
         });
     }
+
+    // --- Utility & Fallback ---
 
     function getWeatherData(lat, lon, city, region) {
         weatherData.city = city;
@@ -2532,7 +2586,7 @@ function fetchWeather() {
     }
 
     function fallbackToKharagpur() {
-        console.warn("All geolocation APIs failed. Falling back to Kharagpur weather.");
+        console.warn("All geolocation attempts failed. Falling back to Kharagpur weather.");
         weatherData.city = "Kharagpur";
         weatherData.region = "West Bengal";
         getWeatherData(22.3269, 87.3105, "Kharagpur", "West Bengal");
