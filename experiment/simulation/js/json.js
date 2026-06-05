@@ -2449,7 +2449,8 @@ function fetchWeather() {
                         geoResponse.latitude, 
                         geoResponse.longitude, 
                         geoResponse.city || "Unknown City", 
-                        geoResponse.region || "Unknown Region"
+                        geoResponse.region || "Unknown Region",
+                        "ipapi.co CORS"
                     );
                 } else {
                     tryIpwhoisCors();
@@ -2473,7 +2474,8 @@ function fetchWeather() {
                         geoResponse.latitude, 
                         geoResponse.longitude, 
                         geoResponse.city || "Unknown City", 
-                        geoResponse.region || "Unknown Region"
+                        geoResponse.region || "Unknown Region",
+                        "ipwho.is CORS"
                     );
                 } else {
                     tryFreeipapiCors();
@@ -2497,7 +2499,8 @@ function fetchWeather() {
                         geoResponse.latitude, 
                         geoResponse.longitude, 
                         geoResponse.cityName || "Unknown City", 
-                        geoResponse.regionName || "Unknown Region"
+                        geoResponse.regionName || "Unknown Region",
+                        "freeipapi.com CORS"
                     );
                 } else {
                     tryIpapiJsonp();
@@ -2523,7 +2526,8 @@ function fetchWeather() {
                         geoResponse.latitude, 
                         geoResponse.longitude, 
                         geoResponse.city || "Unknown City", 
-                        geoResponse.region || "Unknown Region"
+                        geoResponse.region || "Unknown Region",
+                        "ipapi.co JSONP"
                     );
                 } else {
                     tryIpwhoisJsonp();
@@ -2547,7 +2551,8 @@ function fetchWeather() {
                         geoResponse.latitude, 
                         geoResponse.longitude, 
                         geoResponse.city || "Unknown City", 
-                        geoResponse.region || "Unknown Region"
+                        geoResponse.region || "Unknown Region",
+                        "ipwho.is JSONP"
                     );
                 } else {
                     fallbackToKharagpur();
@@ -2561,10 +2566,10 @@ function fetchWeather() {
 
     // --- Utility & Fallback ---
 
-    function getWeatherData(lat, lon, city, region) {
+    function getWeatherData(lat, lon, city, region, apiName) {
         weatherData.city = city;
         weatherData.region = region;
-        console.log("Geolocation successful: " + city + ", " + region + " (" + lat + ", " + lon + ")");
+        console.log("Geolocation successful via " + apiName + ": " + city + ", " + region + " (" + lat + ", " + lon + ")");
         
         $.ajax({
             url: "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current=temperature_2m,relative_humidity_2m,surface_pressure",
@@ -2589,7 +2594,7 @@ function fetchWeather() {
         console.warn("All geolocation attempts failed. Falling back to Kharagpur weather.");
         weatherData.city = "Kharagpur";
         weatherData.region = "West Bengal";
-        getWeatherData(22.3269, 87.3105, "Kharagpur", "West Bengal");
+        getWeatherData(22.3269, 87.3105, "Kharagpur", "West Bengal", "Kharagpur Fallback");
     }
 }
 
