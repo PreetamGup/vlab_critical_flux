@@ -2454,7 +2454,7 @@ function fetchWeather() {
 
     function tryFreeipapiCors() {
         $.ajax({
-            url: "https://freeipapi.com/api/json/",
+            url: "https://free.freeipapi.com/api/json/",
             dataType: "json",
             timeout: 2500,
             success: function (geoResponse) {
@@ -2492,31 +2492,6 @@ function fetchWeather() {
                         "ipapi.co CORS"
                     );
                 } else {
-                    tryIpwhoisCors();
-                }
-            },
-            error: function () {
-                tryIpwhoisCors();
-            }
-        });
-    }
-
-    function tryIpwhoisCors() {
-        console.warn("ipapi.co CORS failed. Trying ipwho.is CORS...");
-        $.ajax({
-            url: "https://ipwho.is/",
-            dataType: "json",
-            timeout: 2500,
-            success: function (geoResponse) {
-                if (geoResponse && geoResponse.success && geoResponse.latitude && geoResponse.longitude) {
-                    getWeatherData(
-                        geoResponse.latitude, 
-                        geoResponse.longitude, 
-                        geoResponse.city || "Unknown City", 
-                        geoResponse.region || "Unknown Region",
-                        "ipwho.is CORS"
-                    );
-                } else {
                     tryIpapiJsonp();
                 }
             },
@@ -2542,31 +2517,6 @@ function fetchWeather() {
                         geoResponse.city || "Unknown City", 
                         geoResponse.region || "Unknown Region",
                         "ipapi.co JSONP"
-                    );
-                } else {
-                    tryIpwhoisJsonp();
-                }
-            },
-            error: function () {
-                tryIpwhoisJsonp();
-            }
-        });
-    }
-
-    function tryIpwhoisJsonp() {
-        console.warn("ipapi.co JSONP failed. Trying ipwho.is JSONP...");
-        $.ajax({
-            url: "https://ipwho.is/",
-            dataType: "jsonp",
-            timeout: 2500,
-            success: function (geoResponse) {
-                if (geoResponse && geoResponse.success && geoResponse.latitude && geoResponse.longitude) {
-                    getWeatherData(
-                        geoResponse.latitude, 
-                        geoResponse.longitude, 
-                        geoResponse.city || "Unknown City", 
-                        geoResponse.region || "Unknown Region",
-                        "ipwho.is JSONP"
                     );
                 } else {
                     fallbackToKharagpur();
