@@ -2433,12 +2433,51 @@ function fetchWeather() {
     if (w3) w3.innerHTML = "...";
     if (w4) w4.innerHTML = "...";
 
-    // Start geolocation lookup chain via CORS first
-    tryIpapiCors();
+    // 1. Check Session Cache to prevent redundant geolocation lookups and preserve API quotas
+    try {
+        var cachedGeo = sessionStorage.getItem("vlab_ivg_geolocation");
+        if (cachedGeo) {
+            var geo = JSON.parse(cachedGeo);
+            if (geo && geo.lat && geo.lon) {
+                getWeatherData(geo.lat, geo.lon, geo.city, geo.region, "Cached Session");
+                return;
+            }
+        }
+    } catch (e) {
+        console.warn("sessionStorage not available:", e);
+    }
+
+    // 2. Start geolocation lookup chain (query high-limit freeipapi.com first to conserve ipapi.co quota)
+    tryFreeipapiCors();
 
     // --- CORS Attempts ---
 
+    function tryFreeipapiCors() {
+        $.ajax({
+            url: "https://freeipapi.com/api/json/",
+            dataType: "json",
+            timeout: 2500,
+            success: function (geoResponse) {
+                if (geoResponse && geoResponse.latitude && geoResponse.longitude) {
+                    getWeatherData(
+                        geoResponse.latitude, 
+                        geoResponse.longitude, 
+                        geoResponse.cityName || "Unknown City", 
+                        geoResponse.regionName || "Unknown Region",
+                        "freeipapi.com CORS"
+                    );
+                } else {
+                    tryIpapiCors();
+                }
+            },
+            error: function () {
+                tryIpapiCors();
+            }
+        });
+    }
+
     function tryIpapiCors() {
+        console.warn("freeipapi.com CORS failed. Trying ipapi.co CORS...");
         $.ajax({
             url: "https://ipapi.co/json/",
             dataType: "json",
@@ -2476,31 +2515,6 @@ function fetchWeather() {
                         geoResponse.city || "Unknown City", 
                         geoResponse.region || "Unknown Region",
                         "ipwho.is CORS"
-                    );
-                } else {
-                    tryFreeipapiCors();
-                }
-            },
-            error: function () {
-                tryFreeipapiCors();
-            }
-        });
-    }
-
-    function tryFreeipapiCors() {
-        console.warn("ipwho.is CORS failed. Trying freeipapi.com CORS...");
-        $.ajax({
-            url: "https://freeipapi.com/api/json/",
-            dataType: "json",
-            timeout: 2500,
-            success: function (geoResponse) {
-                if (geoResponse && geoResponse.latitude && geoResponse.longitude) {
-                    getWeatherData(
-                        geoResponse.latitude, 
-                        geoResponse.longitude, 
-                        geoResponse.cityName || "Unknown City", 
-                        geoResponse.regionName || "Unknown Region",
-                        "freeipapi.com CORS"
                     );
                 } else {
                     tryIpapiJsonp();
@@ -2571,6 +2585,20 @@ function fetchWeather() {
         weatherData.region = region;
         console.log("Geolocation successful via " + apiName + ": " + city + ", " + region + " (" + lat + ", " + lon + ")");
         
+        // Cache the successful lookup in sessionStorage to conserve API request quotas
+        if (apiName !== "Cached Session") {
+            try {
+                sessionStorage.setItem("vlab_ivg_geolocation", JSON.stringify({
+                    lat: lat,
+                    lon: lon,
+                    city: city,
+                    region: region
+                }));
+            } catch (e) {
+                console.warn("Could not save geolocation to sessionStorage:", e);
+            }
+        }
+
         $.ajax({
             url: "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current=temperature_2m,relative_humidity_2m,surface_pressure",
             dataType: "json",
